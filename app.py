@@ -31,8 +31,17 @@ Safety:
 You are not a substitute for a licensed healthcare professional."""
 
 
+def gemini_api_key() -> str:
+    """API key from the environment (Vercel injects these; .env is local-only). Strips accidental newlines/spaces."""
+    for name in ("GOOGLE_API_KEY", "GEMINI_API_KEY"):
+        raw = os.getenv(name)
+        if raw and (key := raw.strip()):
+            return key
+    return ""
+
+
 def _configure_genai() -> None:
-    key = os.getenv("GOOGLE_API_KEY")
+    key = gemini_api_key()
     if not key:
         return
     genai.configure(api_key=key)
@@ -104,15 +113,14 @@ def effective_model_name() -> str:
         return explicit
     if _RESOLVED_MODEL:
         return _RESOLVED_MODEL
-    if not os.getenv("GOOGLE_API_KEY"):
+    if not gemini_api_key():
         return _FALLBACK_MODEL
     return _pick_model_id()
 
 
 def _get_model():
     _configure_genai()
-    key = os.getenv("GOOGLE_API_KEY")
-    if not key:
+    if not gemini_api_key():
         return None
     return genai.GenerativeModel(
         model_name=_pick_model_id(),
@@ -176,7 +184,7 @@ def index():
         messages=messages,
         error=session.pop("error", None),
         model_name=effective_model_name(),
-        has_api_key=bool(os.getenv("GOOGLE_API_KEY")),
+        has_api_key=bool(gemini_api_key()),
     )
 
 
@@ -187,13 +195,16 @@ def chat():
         session["error"] = "Please enter a message."
         return redirect(url_for("index"))
 
-    if not os.getenv("GOOGLE_API_KEY"):
-        session["error"] = "Missing GOOGLE_API_KEY. Add it to your environment or a .env file."
+    if not gemini_api_key():
+        session["error"] = (
+            "Missing API key. On Vercel: Project → Settings → Environment Variables → "
+            "add GOOGLE_API_KEY (or GEMINI_API_KEY), then Redeploy. Local: use a .env file."
+        )
         return redirect(url_for("index"))
 
     model = _get_model()
     if model is None:
-        session["error"] = "Could not initialize the model. Check GOOGLE_API_KEY."
+        session["error"] = "Could not initialize the model. Check your API key value and Google project."
         return redirect(url_for("index"))
 
     messages = _trim_messages(list(session.get("messages") or []))
