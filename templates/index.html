@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Medical Assistant</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">Gen AI medical information</p>
+        <h1>Medical Assistant</h1>
+        <p class="subtitle">
+          Ask general health questions in everyday language. This tool uses Google Gemini; it does not replace a doctor or emergency services.
+        </p>
+      </div>
+      <div class="hero-meta">
+        {% if has_api_key %}
+          <span class="pill ok">API key loaded</span>
+        {% else %}
+          <span class="pill warn">Set GOOGLE_API_KEY</span>
+        {% endif %}
+        <span class="pill muted">Model: {{ model_name }}</span>
+      </div>
+    </header>
+
+    <aside class="disclaimer" role="note">
+      <strong>Important:</strong> Not medical advice for your specific situation. For emergencies, call your local emergency number. For diagnosis or treatment, see a licensed clinician.
+    </aside>
+
+    {% if error %}
+      <div class="banner error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <main class="layout">
+      <section class="thread" aria-label="Conversation">
+        {% if not messages %}
+          <p class="empty">Describe symptoms, medications, or general questions (for example, “What’s the difference between a cold and the flu?”). Keep questions specific for better answers.</p>
+        {% else %}
+          <ol class="messages">
+            {% for m in messages %}
+              <li class="bubble {{ m.role }}">
+                <span class="who">{% if m.role == 'user' %}You{% else %}Assistant{% endif %}</span>
+                <div class="body">{{ m.content | nl2br }}</div>
+              </li>
+            {% endfor %}
+          </ol>
+        {% endif %}
+      </section>
+
+      <section class="composer" aria-label="Send a message">
+        <div class="composer-inner">
+          <form class="chat-form" method="post" action="{{ url_for('chat') }}">
+            <label class="sr-only" for="message">Your message</label>
+            <textarea id="message" name="message" rows="4" placeholder="Type your medical question…" required></textarea>
+            <div class="actions">
+              <button type="submit" class="btn primary" {% if not has_api_key %}disabled{% endif %}>Ask assistant</button>
+            </div>
+          </form>
+          <form class="clear-form" method="post" action="{{ url_for('clear') }}">
+            <button type="submit" class="btn ghost">Clear chat</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Powered by Flask and Google Gemini. Override model with <code>GEMINI_MODEL</code> in your environment.</p>
+    </footer>
+  </div>
+</body>
+</html>
